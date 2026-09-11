@@ -1,0 +1,19 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  toName    String
+  message   String
+  fromAlias String?
+  createdAt DateTime @default(now())
+
+  @@index([toName])
+  @@index([createdAt])
+}
