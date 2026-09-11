@@ -2,7 +2,15 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Comment } from "./CommentSection";
+import type { Comment } from "./NoteComments";
+
+type AdminComment = Comment & {
+  note: {
+    id: string;
+    toName: string;
+    message: string;
+  };
+};
 import { NoteCard, type Note } from "./NoteCard";
 
 export function AdminLogin({ configured }: { configured: boolean }) {
@@ -93,11 +101,11 @@ export function AdminPanel({
   initialComments,
 }: {
   initialNotes: Note[];
-  initialComments: Comment[];
+  initialComments: AdminComment[];
 }) {
   const router = useRouter();
   const [notes, setNotes] = useState(initialNotes);
-  const [comments, setComments] = useState(initialComments);
+  const [comments, setComments] = useState<AdminComment[]>(initialComments);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState("");
 
@@ -227,11 +235,17 @@ export function AdminPanel({
                 <div key={comment.id} className="space-y-2">
                   <article className="note-card">
                     <div className="mb-3 flex items-baseline justify-between gap-3">
-                      <p className="text-sm text-stone-500">Comment</p>
+                      <p className="text-sm text-stone-500">
+                        Reply on note to{" "}
+                        <span className="font-medium text-stone-700">{comment.note.toName}</span>
+                      </p>
                       <time className="shrink-0 text-xs text-stone-400">
                         {formatDate(comment.createdAt)}
                       </time>
                     </div>
+                    <p className="mb-3 line-clamp-2 text-xs text-stone-400">
+                      Note: {comment.note.message}
+                    </p>
                     <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-stone-800">
                       {comment.message}
                     </p>

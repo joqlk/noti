@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { mapFeedNote, noteInclude } from "@/lib/notes";
 import { validateNoteInput } from "@/lib/validation";
 
 export async function GET(request: NextRequest) {
@@ -10,6 +11,7 @@ export async function GET(request: NextRequest) {
 
   const notes = await db.note.findMany({
     where: name ? { toName: { equals: name } } : undefined,
+    include: noteInclude,
     orderBy: { createdAt: "desc" },
     take: limit + 1,
     ...(cursor
@@ -24,7 +26,10 @@ export async function GET(request: NextRequest) {
   const items = hasMore ? notes.slice(0, limit) : notes;
   const nextCursor = hasMore ? items[items.length - 1]?.id : null;
 
-  return NextResponse.json({ notes: items, nextCursor });
+  return NextResponse.json({
+    notes: items.map(mapFeedNote),
+    nextCursor,
+  });
 }
 
 export async function POST(request: NextRequest) {

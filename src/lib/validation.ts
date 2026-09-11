@@ -45,11 +45,17 @@ export function validateNoteInput(input: {
 }
 
 export function validateCommentInput(input: {
+  noteId: string;
   message: string;
   fromAlias?: string;
 }): { ok: true; data: typeof input } | { ok: false; error: string } {
+  const noteId = input.noteId.trim();
   const message = input.message.trim();
   const fromAlias = input.fromAlias?.trim() || undefined;
+
+  if (!noteId) {
+    return { ok: false, error: "Note id is required." };
+  }
 
   if (!message) {
     return { ok: false, error: "Write something first." };
@@ -69,5 +75,5 @@ export function validateCommentInput(input: {
     };
   }
 
-  return { ok: true, data: { message, fromAlias } };
+  return { ok: true, data: { noteId, message, fromAlias } };
 }

@@ -1,15 +1,16 @@
 import Link from "next/link";
-import { CommentSection } from "@/components/CommentSection";
 import { Header } from "@/components/Header";
 import { NoteFeed } from "@/components/NoteFeed";
 import { SearchBar } from "@/components/SearchBar";
 import { db } from "@/lib/db";
 import { SAMPLE_NAMES } from "@/lib/constants";
+import { mapFeedNote, noteInclude } from "@/lib/notes";
 
 export const dynamic = "force-dynamic";
 
 async function getRecentNotes() {
   const notes = await db.note.findMany({
+    include: noteInclude,
     orderBy: { createdAt: "desc" },
     take: 21,
   });
@@ -18,29 +19,13 @@ async function getRecentNotes() {
   const items = hasMore ? notes.slice(0, 20) : notes;
 
   return {
-    notes: items,
-    nextCursor: hasMore ? items[items.length - 1]?.id ?? null : null,
-  };
-}
-
-async function getRecentComments() {
-  const comments = await db.comment.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 21,
-  });
-
-  const hasMore = comments.length > 20;
-  const items = hasMore ? comments.slice(0, 20) : comments;
-
-  return {
-    comments: items,
+    notes: items.map(mapFeedNote),
     nextCursor: hasMore ? items[items.length - 1]?.id ?? null : null,
   };
 }
 
 export default async function HomePage() {
   const { notes, nextCursor } = await getRecentNotes();
-  const { comments, nextCursor: commentsCursor } = await getRecentComments();
 
   return (
     <div className="page-shell">
@@ -69,11 +54,6 @@ export default async function HomePage() {
         </div>
 
         <NoteFeed initialNotes={notes} initialCursor={nextCursor} />
-
-        <CommentSection
-          initialComments={comments}
-          initialCursor={commentsCursor}
-        />
       </div>
     </div>
   );

@@ -17,9 +17,17 @@ function formatDate(date: string | Date) {
   }).format(new Date(date));
 }
 
-export function NoteCard({ note }: { note: Note }) {
+export function NoteCard({
+  note,
+  embedded = false,
+}: {
+  note: Note;
+  embedded?: boolean;
+}) {
+  const Tag = embedded ? "div" : "article";
+
   return (
-    <article className="note-card group">
+    <Tag className={embedded ? "group" : "note-card group"}>
       <div className="mb-3 flex items-baseline justify-between gap-3">
         <p className="text-sm text-stone-500">
           To{" "}
@@ -45,6 +53,6 @@ export function NoteCard({ note }: { note: Note }) {
           <span className="font-medium text-stone-600">{note.fromAlias}</span>
         </p>
       ) : null}
-    </article>
+    </Tag>
   );
 }

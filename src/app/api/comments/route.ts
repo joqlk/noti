@@ -4,25 +4,25 @@ import { validateCommentInput } from "@/lib/validation";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
-  const cursor = searchParams.get("cursor");
-  const limit = Math.min(Number(searchParams.get("limit") ?? 20), 50);
+  const noteId = searchParams.get("noteId")?.trim();
+
+  if (!noteId) {
+    return NextResponse.json({ error: "noteId is required." }, { status: 400 });
+  }
+
+  const note = await db.note.findUnique({ where: { id: noteId }, select: { id: true } });
+
+  if (!note) {
+    return NextResponse.json({ error: "Note not found." }, { status: 404 });
+  }
 
   const comments = await db.comment.findMany({
-    orderBy: { createdAt: "desc" },
-    take: limit + 1,
-    ...(cursor
-      ? {
-          cursor: { id: cursor },
-          skip: 1,
-        }
-      : {}),
+    where: { noteId },
+    orderBy: { createdAt: "asc" },
+    take: 100,
   });
 
-  const hasMore = comments.length > limit;
-  const items = hasMore ? comments.slice(0, limit) : comments;
-  const nextCursor = hasMore ? items[items.length - 1]?.id : null;
-
-  return NextResponse.json({ comments: items, nextCursor });
+  return NextResponse.json({ comments });
 }
 
 export async function POST(request: NextRequest) {
@@ -35,6 +35,10 @@ export async function POST(request: NextRequest) {
   }
 
   const parsed = validateCommentInput({
+    noteId:
+      typeof body === "object" && body !== null && "noteId" in body
+        ? String((body as { noteId: unknown }).noteId)
+        : "",
     message:
       typeof body === "object" && body !== null && "message" in body
         ? String((body as { message: unknown }).message)
@@ -47,6 +51,15 @@ export async function POST(request: NextRequest) {
 
   if (!parsed.ok) {
     return NextResponse.json({ error: parsed.error }, { status: 400 });
+  }
+
+  const note = await db.note.findUnique({
+    where: { id: parsed.data.noteId },
+    select: { id: true },
+  });
+
+  if (!note) {
+    return NextResponse.json({ error: "Note not found." }, { status: 404 });
   }
 
   const comment = await db.comment.create({

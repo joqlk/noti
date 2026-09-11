@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { NoteCard, type Note } from "./NoteCard";
+import { NoteWithComments, type FeedNote } from "./NoteWithComments";
 
 type NoteFeedProps = {
   name?: string;
-  initialNotes: Note[];
+  initialNotes: FeedNote[];
   initialCursor: string | null;
 };
 
@@ -52,7 +52,7 @@ export function NoteFeed({ name, initialNotes, initialCursor }: NoteFeedProps) {
   return (
     <div className="space-y-4">
       {notes.map((note) => (
-        <NoteCard key={note.id} note={note} />
+        <NoteWithComments key={note.id} note={note} />
       ))}
 
       {cursor ? (

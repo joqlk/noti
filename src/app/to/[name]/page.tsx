@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Header } from "@/components/Header";
 import { NoteFeed } from "@/components/NoteFeed";
 import { db } from "@/lib/db";
+import { mapFeedNote, noteInclude } from "@/lib/notes";
 import { normalizeName } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +15,7 @@ type PageProps = {
 async function getNotesForName(name: string) {
   const notes = await db.note.findMany({
     where: { toName: name },
+    include: noteInclude,
     orderBy: { createdAt: "desc" },
     take: 21,
   });
@@ -22,7 +24,7 @@ async function getNotesForName(name: string) {
   const items = hasMore ? notes.slice(0, 20) : notes;
 
   return {
-    notes: items,
+    notes: items.map(mapFeedNote),
     nextCursor: hasMore ? items[items.length - 1]?.id ?? null : null,
   };
 }

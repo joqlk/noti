@@ -20,6 +20,11 @@ async function getAllNotes() {
 
 async function getAllComments() {
   return db.comment.findMany({
+    include: {
+      note: {
+        select: { id: true, toName: true, message: true },
+      },
+    },
     orderBy: { createdAt: "desc" },
     take: 100,
   });

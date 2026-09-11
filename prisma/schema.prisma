@@ -8,11 +8,12 @@ datasource db {
 }
 
 model Note {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   toName    String
   message   String
   fromAlias String?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
+  comments  Comment[]
 
   @@index([toName])
   @@index([createdAt])
@@ -20,9 +21,12 @@ model Note {
 
 model Comment {
   id        String   @id @default(cuid())
+  noteId    String
   message   String
   fromAlias String?
   createdAt DateTime @default(now())
+  note      Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
 
+  @@index([noteId])
   @@index([createdAt])
 }
