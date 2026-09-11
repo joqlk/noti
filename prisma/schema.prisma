@@ -17,3 +17,12 @@ model Note {
   @@index([toName])
   @@index([createdAt])
 }
+
+model Comment {
+  id        String   @id @default(cuid())
+  message   String
+  fromAlias String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}

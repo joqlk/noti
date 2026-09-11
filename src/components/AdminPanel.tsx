@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import type { Comment } from "./CommentSection";
 import { NoteCard, type Note } from "./NoteCard";
 
 export function AdminLogin({ configured }: { configured: boolean }) {
@@ -49,7 +50,7 @@ export function AdminLogin({ configured }: { configured: boolean }) {
   return (
     <form onSubmit={handleSubmit} className="rounded-3xl border border-stone-200/80 bg-white/90 p-6 shadow-sm sm:p-8">
       <h2 className="mb-2 text-xl font-semibold text-stone-900">Admin sign in</h2>
-      <p className="mb-6 text-sm text-stone-500">Enter your admin secret to moderate notes.</p>
+      <p className="mb-6 text-sm text-stone-500">Enter your admin secret to moderate notes and comments.</p>
 
       <label htmlFor="secret" className="mb-2 block text-sm font-medium text-stone-700">
         Admin secret
@@ -78,22 +79,39 @@ export function AdminLogin({ configured }: { configured: boolean }) {
   );
 }
 
-export function AdminPanel({ initialNotes }: { initialNotes: Note[] }) {
+function formatDate(date: string | Date) {
+  return new Intl.DateTimeFormat("en-KE", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(date));
+}
+
+export function AdminPanel({
+  initialNotes,
+  initialComments,
+}: {
+  initialNotes: Note[];
+  initialComments: Comment[];
+}) {
   const router = useRouter();
   const [notes, setNotes] = useState(initialNotes);
+  const [comments, setComments] = useState(initialComments);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
     setNotes(initialNotes);
-  }, [initialNotes]);
+    setComments(initialComments);
+  }, [initialNotes, initialComments]);
 
-  const handleDelete = useCallback(
+  const handleDeleteNote = useCallback(
     async (id: string) => {
       if (!confirm("Delete this note permanently?")) return;
 
       setError("");
-      setDeletingId(id);
+      setDeletingId(`note:${id}`);
 
       try {
         const res = await fetch(`/api/notes/${id}`, { method: "DELETE" });
@@ -115,6 +133,33 @@ export function AdminPanel({ initialNotes }: { initialNotes: Note[] }) {
     [router],
   );
 
+  const handleDeleteComment = useCallback(
+    async (id: string) => {
+      if (!confirm("Delete this comment permanently?")) return;
+
+      setError("");
+      setDeletingId(`comment:${id}`);
+
+      try {
+        const res = await fetch(`/api/comments/${id}`, { method: "DELETE" });
+        const data = await res.json();
+
+        if (!res.ok) {
+          setError(data.error ?? "Could not delete comment.");
+          return;
+        }
+
+        setComments((prev) => prev.filter((comment) => comment.id !== id));
+        router.refresh();
+      } catch {
+        setError("Could not delete comment. Try again.");
+      } finally {
+        setDeletingId(null);
+      }
+    },
+    [router],
+  );
+
   async function handleLogout() {
     await fetch("/api/admin/logout", { method: "POST" });
     router.refresh();
@@ -125,7 +170,9 @@ export function AdminPanel({ initialNotes }: { initialNotes: Note[] }) {
       <div className="mb-6 flex items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold text-stone-900">Moderation</h2>
-          <p className="text-sm text-stone-500">{notes.length} notes shown</p>
+          <p className="text-sm text-stone-500">
+            {notes.length} notes · {comments.length} comments
+          </p>
         </div>
         <button
           type="button"
@@ -140,29 +187,79 @@ export function AdminPanel({ initialNotes }: { initialNotes: Note[] }) {
         <p className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>
       ) : null}
 
-      {notes.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-stone-200 bg-white/60 px-6 py-12 text-center text-stone-500">
-          No notes to moderate.
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {notes.map((note) => (
-            <div key={note.id} className="space-y-2">
-              <NoteCard note={note} />
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => handleDelete(note.id)}
-                  disabled={deletingId === note.id}
-                  className="rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 transition hover:bg-red-100 disabled:opacity-60"
-                >
-                  {deletingId === note.id ? "Deleting..." : "Delete note"}
-                </button>
-              </div>
+      <div className="space-y-10">
+        <section>
+          <h3 className="mb-4 text-lg font-semibold text-stone-900">Notes</h3>
+          {notes.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-stone-200 bg-white/60 px-6 py-12 text-center text-stone-500">
+              No notes to moderate.
             </div>
-          ))}
-        </div>
-      )}
+          ) : (
+            <div className="space-y-4">
+              {notes.map((note) => (
+                <div key={note.id} className="space-y-2">
+                  <NoteCard note={note} />
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteNote(note.id)}
+                      disabled={deletingId === `note:${note.id}`}
+                      className="rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 transition hover:bg-red-100 disabled:opacity-60"
+                    >
+                      {deletingId === `note:${note.id}` ? "Deleting..." : "Delete note"}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section>
+          <h3 className="mb-4 text-lg font-semibold text-stone-900">Comments</h3>
+          {comments.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-stone-200 bg-white/60 px-6 py-12 text-center text-stone-500">
+              No comments to moderate.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {comments.map((comment) => (
+                <div key={comment.id} className="space-y-2">
+                  <article className="note-card">
+                    <div className="mb-3 flex items-baseline justify-between gap-3">
+                      <p className="text-sm text-stone-500">Comment</p>
+                      <time className="shrink-0 text-xs text-stone-400">
+                        {formatDate(comment.createdAt)}
+                      </time>
+                    </div>
+                    <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-stone-800">
+                      {comment.message}
+                    </p>
+                    {comment.fromAlias ? (
+                      <p className="mt-4 text-sm text-stone-500">
+                        from{" "}
+                        <span className="font-medium text-stone-600">
+                          {comment.fromAlias}
+                        </span>
+                      </p>
+                    ) : null}
+                  </article>
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteComment(comment.id)}
+                      disabled={deletingId === `comment:${comment.id}`}
+                      className="rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 transition hover:bg-red-100 disabled:opacity-60"
+                    >
+                      {deletingId === `comment:${comment.id}` ? "Deleting..." : "Delete comment"}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
     </div>
   );
 }

@@ -18,10 +18,18 @@ async function getAllNotes() {
   });
 }
 
+async function getAllComments() {
+  return db.comment.findMany({
+    orderBy: { createdAt: "desc" },
+    take: 100,
+  });
+}
+
 export default async function AdminPage() {
   const configured = isAdminConfigured();
   const authenticated = configured && (await isAdminSession());
   const notes = authenticated ? await getAllNotes() : [];
+  const comments = authenticated ? await getAllComments() : [];
 
   return (
     <div className="page-shell">
@@ -29,7 +37,7 @@ export default async function AdminPage() {
         <Header />
 
         {authenticated ? (
-          <AdminPanel initialNotes={notes} />
+          <AdminPanel initialNotes={notes} initialComments={comments} />
         ) : (
           <AdminLogin configured={configured} />
         )}
